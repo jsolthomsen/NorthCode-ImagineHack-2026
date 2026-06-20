@@ -28,6 +28,44 @@ public class WaterPredictionService {
         this.waterSourceRepository = waterSourceRepository;
     }
 
+    public List<WaterSource> generateCandidatesFromSoilData(ConstructionSite site, SoilDataService soilDataService) {
+        List<WaterSource> candidates = new ArrayList<>();
+
+        double[][] offsets = {
+                {0.01, 0.00},
+                {-0.01, 0.01},
+                {0.00, -0.015},
+                {0.015, 0.01},
+                {-0.012, -0.008}
+        };
+
+        for (double[] offset : offsets) {
+            double lat = site.getLatitude() + offset[0];
+            double lon = site.getLongitude() + offset[1];
+
+            SoilDataService.SoilProperties soil = soilDataService.fetchSoilProperties(lat, lon);
+            double score = scoreFromSoilData(soil);
+            double distanceKm = haversineKm(site.getLatitude(), site.getLongitude(), lat, lon);
+
+            String sourceLabel = soil.isRealData()
+                    ? "soilgrids: phh2o, ocd, cec"
+                    : "soilgrids: phh2o, ocd, cec (fallback - api unreachable)";
+
+            WaterSource candidate = new WaterSource(
+                    lat,
+                    lon,
+                    score,
+                    distanceKm,
+                    sourceLabel,
+                    site
+            );
+            candidates.add(waterSourceRepository.save(candidate));
+        }
+
+        candidates.sort((a, b) -> Double.compare(b.getProbabilityScore(), a.getProbabilityScore()));
+        return candidates;
+    }
+
     public List<WaterSource> generateCandidates(ConstructionSite site, SensorReading reading) {
         List<WaterSource> candidates = new ArrayList<>();
 
@@ -70,6 +108,20 @@ public class WaterPredictionService {
         double slopeScore = clamp(1.0 - (reading.getTerrainSlopeDegrees() / 45.0)); // flatter = better, cap at 45deg
 
         double weighted = (ndviScore * 0.4) + (rainfallScore * 0.4) + (slopeScore * 0.2);
+        return Math.round(weighted * 1000.0) / 1000.0;
+    }
+
+    /**
+     * Scores a location using real SoilGrids data instead of manually entered sensor values.
+     * Higher organic carbon density and cation exchange capacity correlate with better
+     * water retention; pH closer to neutral (6.5-8.5) indicates more usable groundwater.
+     */
+    public double scoreFromSoilData(SoilDataService.SoilProperties soil) {
+        double ocdScore = clamp(soil.organicCarbonDensity() / 80.0);   // typical range 0-80
+        double cecScore = clamp(soil.cationExchangeCapacity() / 40.0); // typical range 0-40
+        double pHScore = clamp(1.0 - (Math.abs(soil.pH() - 7.0) / 3.5)); // closer to neutral = better
+
+        double weighted = (ocdScore * 0.35) + (cecScore * 0.35) + (pHScore * 0.30);
         return Math.round(weighted * 1000.0) / 1000.0;
     }
 

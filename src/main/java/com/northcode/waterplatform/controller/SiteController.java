@@ -47,4 +47,14 @@ public class SiteController {
     public List<WaterSource> getWaterSources(@PathVariable Long id) {
         return siteService.getWaterSources(id);
     }
+
+    /**
+     * Automatically generates water source predictions using real SoilGrids data
+     * for the site's coordinates. No manual upload needed - call this right after
+     * creating a site to get predictions.
+     */
+    @PostMapping("/sites/{id}/auto-predict")
+    public List<WaterSource> autoPredict(@PathVariable Long id) {
+        return siteService.autoPredict(id);
+    }
 }

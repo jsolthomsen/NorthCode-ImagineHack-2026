@@ -1,5 +1,6 @@
 package com.northcode.waterplatform.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +18,7 @@ public class ConstructionSite {
     private double latitude;
     private double longitude;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "site", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WaterSource> waterSources = new ArrayList<>();
 
