@@ -20,15 +20,18 @@ public class SiteService {
     private final SensorReadingRepository sensorReadingRepository;
     private final WaterSourceRepository waterSourceRepository;
     private final WaterPredictionService predictionService;
+    private final SoilDataService soilDataService;
 
     public SiteService(ConstructionSiteRepository siteRepository,
                         SensorReadingRepository sensorReadingRepository,
                         WaterSourceRepository waterSourceRepository,
-                        WaterPredictionService predictionService) {
+                        WaterPredictionService predictionService,
+                        SoilDataService soilDataService) {
         this.siteRepository = siteRepository;
         this.sensorReadingRepository = sensorReadingRepository;
         this.waterSourceRepository = waterSourceRepository;
         this.predictionService = predictionService;
+        this.soilDataService = soilDataService;
     }
 
     public ConstructionSite createSite(CreateSiteRequest request) {
@@ -70,5 +73,14 @@ public class SiteService {
 
     public List<WaterSource> getWaterSources(Long siteId) {
         return waterSourceRepository.findBySiteIdOrderByProbabilityScoreDesc(siteId);
+    }
+
+    /**
+     * Generates water source predictions automatically using real SoilGrids data
+     * for the site's coordinates - no manual sensor upload required.
+     */
+    public List<WaterSource> autoPredict(Long siteId) {
+        ConstructionSite site = getSite(siteId);
+        return predictionService.generateCandidatesFromSoilData(site, soilDataService);
     }
 }

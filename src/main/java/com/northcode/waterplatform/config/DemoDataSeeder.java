@@ -34,6 +34,8 @@ public class DemoDataSeeder implements CommandLineRunner {
 
         siteService.uploadSensorData(sensorData);
 
-        System.out.println("Demo data ready. Try: GET http://localhost:8080/api/sites/" + site.getId() + "/water-sources");
+        System.out.println("Demo data ready. Site id=" + site.getId());
+        System.out.println("Try: GET  http://localhost:8080/api/sites/" + site.getId() + "/water-sources");
+        System.out.println("Try: POST http://localhost:8080/api/sites/" + site.getId() + "/auto-predict (uses real SoilGrids data)");
     }
 }
